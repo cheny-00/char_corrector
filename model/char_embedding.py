@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 
-
+# from https://github.com/kamigaito/rnnlm-pytorch/blob/master/models.py
 class CNNCharEmb(nn.Module):
     """
     CNN for embedding characters
