@@ -2,29 +2,26 @@
 import multiprocessing
 from gensim.models import Word2Vec
 
-from utils.vocab import Vocab
-from utils.construct_dataset import LMDataset
-
-def train_word2vec(data):
-    data_indices_str = []
-    for d in data[:2]:
-        for x in d:
-            data_indices_str.append(list(map(str, x)))
-    w2v_model = Word2Vec(data_indices_str, vector_size=50, window=7, min_count=50,
-                            sg=1, epochs=5 ,workers=multiprocessing.cpu_count())
-    return w2v_model
-    
-#embeddings.wv.save_word2vec_format(emb_path, binary=False)
-
+from vocab import Vocab
+from construct_dataset import LMDataset
 
 if __name__ == '__main__':
     
+    import datasets
+    
     vocab_path = '../data/en_dictionary.txt'
     emb_save_path = '../data/en_char_emb.wv'
-    corpus_path = ''
-    
+    corpus_path = '/mnt/d/datasets/en/bookcorpus/saved/train'
+    corpus_data = datasets.load_from_disk(corpus_path)
+    corpus_data = corpus_data[:100]['text']
     
     corpus_vocab = Vocab(vocab_path)
     
-    data = LMDataset(corpus_path)
+    train_data = LMDataset(corpus=corpus_data, vocab=corpus_vocab, seq_len=100, n_corpus=1000)
+    
+    w2v_model = Word2Vec(train_data.corpus, vector_size=50, window=7, min_count=50,
+                            sg=1, epochs=5 ,workers=multiprocessing.cpu_count())
+    w2v_model.wv.save_word2vec_format(emb_save_path, binary=False) 
+    # Trans to npy
+    
     

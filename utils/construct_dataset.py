@@ -27,7 +27,7 @@ class BaseDataset(Dataset):
         
         self.vocab = vocab
         self.seq_len = seq_len
-        
+
         self.on_memory = on_memory
         self.corpus_lines = corpus_lines
         self.corpus = corpus
@@ -43,19 +43,24 @@ class LMDataset(BaseDataset):
         
         if n_corpus is not None and n_corpus != corpus_lines:
             self.corpus = utils.reservoir_sampling(self.corpus, n_corpus)
-            self.corpus_lines = self.n_corpus
+            self.corpus_lines = n_corpus
         self.corpus = data_preprocess.normalize_sents(self.corpus)
         self.corpus = self.word_2_indices(self.corpus, vocab)
+        # print(self.corpus, 'zz')
         
-    
+    @staticmethod
     def word_2_indices(corpus, vocab):
 
         indices_corpus = list()
         for line in corpus:
             indices_line = list()
+            line = line.split(' ')
             for char in line:
                 char_index = vocab.stoi.get(char, vocab.unk_index)
+                if char_index == vocab.unk_index:
+                    print(char)
                 indices_line.append(char_index)
+            indices_corpus.append(indices_line)
         return indices_corpus
                 
     
