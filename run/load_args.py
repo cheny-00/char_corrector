@@ -18,7 +18,7 @@ def load_args():
 
     parser.add_argument("--batch_size", type=int, default=512, help="batch size for train")
     parser.add_argument("--eval_batch_size", type=int, default=1024, help="batch size for evaluation")
-    parser.add_argument("--data_path", type=str, default="/home/cy/workspace/datasets/new_240hz_data", help="data")
+    parser.add_argument("--corpus_path", type=str, default="/home/cy/workspace/datasets/new_240hz_data", help="loading corpus path")
     parser.add_argument("--load_dataset_path", type=str, default="", help="dataset")
     parser.add_argument("--proj_name", type=str, default="rnnlm", help="project name")
     parser.add_argument("--model_name", type=str, default="rnnlm", help="select model")
