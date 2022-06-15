@@ -9,6 +9,7 @@ from torch.utils.data import Dataset
 
 import utils
 import data_preprocess
+from utils.vocab import Vocab
 
 """
 TODO:
@@ -81,13 +82,21 @@ class LMDataset(BaseDataset):
     
 if __name__ == '__main__':
     
-    data_dir = ""
-    lang = ""
-    filename = f"{lang}.corpus"
+    import datasets
+    corpus_path = '/mnt/d/datasets/en/bookcorpus/saved/train'
+    vocab_path = '../data/en_dictionary.txt'
+
+    corpus_data = datasets.load_from_disk(corpus_path)
+    vocab = Vocab(vocab_path)
+    seq_len = 128
     
-    corpus = open(os.path.join(data_dir, filename)).readlines() # lines = > a part of sample with ?
-    
-    seq_len_limit = 128
+    dataset = LMDataset(
+        corpus=corpus_data,
+        vocab=vocab,
+        seq_len=seq_len,
+        corpus_lines=None,
+        
+    )
     
     
     

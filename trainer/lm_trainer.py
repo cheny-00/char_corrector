@@ -3,8 +3,8 @@ from trainer.trainer import BaseTrainer
 
 class LMTrainer(BaseTrainer):
     
-    def __init__(self, optim, seq_len, lr, batch_size, emb_dim, train_data, dev_data, tb_writer, logger, eval_interval, scheduler=None, ckp_save_path=None, train_step=0):
-        super().__init__(optim, seq_len, lr, batch_size, emb_dim, train_data, dev_data, tb_writer, logger, eval_interval, scheduler, ckp_save_path, train_step)
+    def __init__(self, optim, seq_len, batch_size, emb_dim, train_data, dev_data, tb_writer, logger, eval_interval, scheduler=None, ckp_save_path=None, train_step=0):
+        super().__init__(optim, seq_len, batch_size, emb_dim, train_data, dev_data, tb_writer, logger, eval_interval, scheduler, ckp_save_path, train_step)
     
     def train_process(self, model, data, **kwargs):
         

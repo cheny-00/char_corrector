@@ -11,12 +11,11 @@ class BaseTrainer:
     def __init__(self,
                  optim,
                  seq_len,
-                 lr,
                  batch_size,
                  emb_dim,
                  train_data,
                  dev_data,
-                 tb_writer,
+                 tb_writter,
                  logger,
                  eval_interval,
                  scheduler=None,
@@ -26,7 +25,6 @@ class BaseTrainer:
         self.seq_len = seq_len
         self.batch_size = batch_size
         self.emb_dim = emb_dim
-        self.lr = lr
         self.eval_interval = eval_interval
         
         self.train_data = train_data
@@ -36,7 +34,7 @@ class BaseTrainer:
         self.scheduler = scheduler
         
         self.ckp_save_path = ckp_save_path
-        self.tb_writer = tb_writer
+        self.tb_writter = tb_writter
         self.logger = logger
         
         self.train_step = train_step
@@ -74,10 +72,10 @@ class BaseTrainer:
                     elapsed = time() - log_start_time
                     cur_lr = self.optim.param_groups[0]['lr']
                     
-                    if self.tb_writer is not None:
-                        self.tb_writer.add_scalar('loss', cur_loss, self.train_step)
-                        self.tb_writer.add_scalar('lr', cur_lr, self.train_step)
-                        self.tb_writer.add_scalar('elapsed', elapsed, self.train_step)
+                    if self.tb_writter is not None:
+                        self.tb_writter.add_scalar('loss', cur_loss, self.train_step)
+                        self.tb_writter.add_scalar('lr', cur_lr, self.train_step)
+                        self.tb_writter.add_scalar('elapsed', elapsed, self.train_step)
                     
                     desc_txt =  f"| Epoch: {i} | steps: {self.train_step}| {num_batch} batches | loss: {cur_loss: 5.6f} | lr: {cur_lr: 5.6f} | elapsed: {elapsed}"
 
@@ -93,8 +91,8 @@ class BaseTrainer:
                 
                 valid_score = scores['valid_score']
                 dev_desc_txt =  f"| Dev at epoch: {i} | steps: {self.train_step}| {num_batch} batches | valid_score: {valid_score: 5.6f} | best_score: {best_score: 5.6f}| elapsed: {dev_elapsed} |"
-                if self.tb_writer is not None:
-                    self.tb_writer.add_scalar('dev_score', valid_score, self.train_step)
+                if self.tb_writter is not None:
+                    self.tb_writter.add_scalar('dev_score', valid_score, self.train_step)
                 self.logger('-' * len(dev_desc_txt) + "\n" + dev_desc_txt + "\n" + '-' * len(dev_desc_txt), print_=True)
 
                 if  valid_score < best_score:

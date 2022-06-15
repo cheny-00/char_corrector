@@ -11,6 +11,8 @@ from utils.construct_dataset import LMDataset
 from utils.utils import create_exp_dir, randn_sampler
 from trainer.lm_trainer import LMTrainer
 from model import model_table
+from utils import vocab
+from utils import data_collate
 
 #############################################################################################
 ##  setting
@@ -41,40 +43,54 @@ if not os.path.exists(save_path) and not args.debug:
 #############################################################################################
 val_split = [0.15, 0.1]
 
-corpus_data = datasets.load_from_disk(args.corpus_path)
-corpus_data = corpus_data[:100]['text']
+corpus_data = data_collate(args.corpus_path, args.dataset_name)
 
-dataset = LMDataset(data_path=args.corpus_path
-                    )
+corpus_vocab = vocab.Vocab(args.vocab_path)
 
-dataset.get_data()
-# print(dataset.dt)
+corpus_dataset = LMDataset(
+    corpus=corpus_data,
+    vocab=corpus_vocab,
+    seq_len=args.seq_len,
+    corpus_lines=None,
+    
+)
+
 #if not os.path.exists(args.load_dataset_path):
 #    torch.save(dataset, args.data)
-dev_sampler, eval_sampler, train_sampler = randn_sampler(val_split,
-                                                         len(dataset),
-                                                         shuffle_dataset=True,
-                                                         random_seed=args.seed)
+dev_sampler, eval_sampler, train_sampler = randn_sampler(
+    val_split,
+    len(corpus_dataset),
+    shuffle_dataset=True,
+    random_seed=args.seed,
+)
 
 
-train_iter = DataLoader(dataset,
-                        batch_size=args.batch_size,
-                        drop_last=False,
-                        sampler=train_sampler)
-dev_iter = DataLoader(dataset,
-                      batch_size=args.eval_batch_size,
-                      sampler=dev_sampler)
-eval_iter = DataLoader(dataset,
-                       batch_size=args.eval_batch_size,
-                       sampler=eval_sampler)
+train_iter = DataLoader(
+    corpus_dataset,
+    batch_size=args.batch_size,
+    drop_last=False,
+    sampler=train_sampler,
+)
+dev_iter = DataLoader(
+    corpus_dataset,
+    batch_size=args.eval_batch_size,
+    sampler=dev_sampler,
+)
+eval_iter = DataLoader(
+    corpus_dataset,
+    batch_size=args.eval_batch_size,
+    sampler=eval_sampler,
+)
 
-model = models[args.model_name]
+model = model_table(args.model_name)
 model_params = { 
-    "enc_hs": 128,
-    "dec_hs": 64,
-    "enc_hidden_size": 128,
-    "dec_hidden_size": 64,
-    "drop_prob": args.dropout,
+    "enc_size": args.enc_size,
+    "hid_size": args.hid_size,
+    "dec_size": args.dec_size,
+    "voc_size": args.voc_size,
+    "drop_rate": args.dropout,
+    "voc_embd": len(corpus_vocab),
+    "n_layer": args.n_layer,
     "device": device,
     }
 model = model(**model_params)
@@ -112,29 +128,26 @@ if args.qat:
 #############################################################################################
 ##  train model
 #############################################################################################
-if 'depressed' in args.model_name:
-    ModelTrainer = DepressModelTrainer
-else:
-    ModelTrainer = LSTMModelTrainer
-
+ModelTrainer = LMTrainer
 
 trainer_params = {
-    "epochs": args.epochs,
-    "train_iter": train_iter,
-    "dev_iter": dev_iter,
+    "train_data": train_iter,
+    "dev_data": dev_iter,
     "logger": logging,
     "batch_size": args.batch_size,
     "log_interval": args.log_interval,
     "eval_interval": args.eval_interval,
     "optim": optim,
-    "save_path": save_path,
-    "is_qat": args.qat,
-    "scheduler": scheduler
+    "ckp_save_path": save_path,
+    "scheduler": scheduler,
+    "seq_len": args.seq_len,
+    "tb_writter": None,
+    
 }
 
 model_trainer = ModelTrainer(**trainer_params)
 
-model_trainer.train(model, None)
+model_trainer.train(model, args.epochs)
 
 #############################################################################################
 ##  evaluate model
@@ -142,13 +155,6 @@ model_trainer.train(model, None)
 
 eval_start_time = time()
 scores = model_trainer.eval_step(model, eval_iter)
-
-rmsd_loss, angle_loss, final_score =\
-    scores['rmsd_loss'], scores['angle_loss'], scores['valid_score']
-eval_log_str = f"| Final Eval | speed time: {time() - eval_start_time} " \
-          f"| rmsd: {rmsd_loss:5.4f} | angle loss: {angle_loss:5.4f} |  average valid loss: {final_score:5.7f} | "
-
-logging('-' * len(eval_log_str) + "\n" + eval_log_str + "\n" + '-' * len(eval_log_str), print_=True)
 
 
 #############################################################################################
@@ -164,6 +170,6 @@ save_params = {
     "score": final_score
 }
 torch.save(save_params,
-           os.path.join(save_path, "LSTM.pt"))
+           os.path.join(save_path, f"{args.proj_name}.pt"))
 
 

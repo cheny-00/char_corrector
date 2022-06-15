@@ -19,8 +19,8 @@ class Vocab:
         
         self.stoi = {tok: i for i, tok in enumerate(self.itos)}
 
-        
-        
+    def __len__(self):
+        return len(self.itos)
         
         
         
