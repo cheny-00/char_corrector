@@ -10,9 +10,9 @@ class CNNCharEmb(nn.Module):
     def  __init__(self, prm):
         super(CNNCharEmb, self).__init__()
         self.prm = prm
-        self.encoder = nn.Embedding(prm["char_len"], prm["char_emb"])
-        self.drop = nn.Dropout(prm["dropout"])
-        self.conv_layers = nn.ModuleList([nn.Conv1d(prm["char_emb"], prm["char_hid"], kernel_size=ksz, padding=(prm["char_kmax"]-prm["char_kmin"])) for ksz in range(prm["char_kmin"], prm["char_kmax"]+1)])
+        self.encoder = nn.Embedding(prm["voc_size"], prm["emb_size"])
+        self.drop = nn.Dropout(prm["drop_rate"])
+        self.conv_layers = nn.ModuleList([nn.Conv1d(prm["emb_size"], prm["char_hid"], kernel_size=ksz, padding=(prm["char_kmax"]-prm["char_kmin"])) for ksz in range(prm["char_kmin"], prm["char_kmax"]+1)])
         self.fullcon_layer = nn.Linear(prm["char_hid"]*(prm["char_kmax"] - prm["char_kmin"] + 1), prm["char_hid"])
 
     def forward(self, input):

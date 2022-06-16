@@ -30,7 +30,7 @@ class BaseDataset(Dataset):
         self.seq_len = seq_len
 
         self.on_memory = on_memory
-        self.corpus_lines = corpus_lines
+        self.corpus_lines = corpus_lines if corpus_lines is not None else len(corpus)
         self.corpus = corpus
         self.encoding = encoding
         
@@ -39,7 +39,7 @@ class BaseDataset(Dataset):
 
 class LMDataset(BaseDataset):
     
-    def __init__(self, corpus, vocab, seq_len, encoding="utf-8", corpus_lines=None, on_memory=True, n_corpus=None):
+    def __init__(self, corpus, vocab, seq_len, encoding="utf-8", corpus_lines=None, on_memory=True, n_corpus=None, max_len=512):
         super().__init__(corpus, vocab, seq_len, encoding, corpus_lines, on_memory)
         
         if n_corpus is not None and n_corpus != corpus_lines:
@@ -47,6 +47,8 @@ class LMDataset(BaseDataset):
             self.corpus_lines = n_corpus
         self.corpus = data_preprocess.normalize_sents(self.corpus)
         self.corpus = self.word_2_indices(self.corpus, vocab)
+        self.corpus = self.format_data(self.corpus)
+        self.max_len = max_len
         # print(self.corpus, 'zz')
         
     @staticmethod
@@ -74,6 +76,27 @@ class LMDataset(BaseDataset):
         features = dict()
         features['x'] = corpus[idx]
         return features
+    
+    def format_corpus(self, data, *args, **kwargs):
+        
+        new_data = list()
+        for line in data:
+            new_data.append(self.format_line(line, *args, **kwargs))
+        return new_data
+            
+    
+    @staticmethod
+    def format_line(line, max_len, pad_idx, eol_idx):
+        if len(line) > max_len:
+            line = line[len(line) - max_len:]
+        line_len = len(line)
+        if len(line) < max_len:
+            line = [pad_idx] * (max_len - len(line)) + line
+        line.append(eol_idx)
+        
+        return line, line_len
+            
+        
     
     def __getitem__(self, index):
         sample = self.patch_data(self.corpus, index)

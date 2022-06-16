@@ -1,5 +1,6 @@
 
 import os
+from attr import has
 import torch
 from tqdm import tqdm
 from time import time
@@ -38,14 +39,16 @@ class BaseTrainer:
         self.logger = logger
         
         self.train_step = train_step
+        self.hidden = None
         
     
     
     def train(self,
               model,
-              epochs):
+              epochs,
+              run_process):
         
-        run_process = partial(self.train_process, model=model)
+
 
         log_interval, eval_interval = self.log_interval, self.eval_interval
 
@@ -57,12 +60,12 @@ class BaseTrainer:
             log_start_time = time()
 
             for num_batch, data in enumerate(tqdm_train_iter):
-                logits, loss = run_process(data=data)
+                if hasattr(model, 'init_hidden'):
+                    self.hidden = model.init_hidden()
+                loss = run_process(data=data, )
 
-                train_loss += loss.float().item()
+                train_loss += loss
                 # TODO will we use fp16?
-                loss.backward()
-                self.optim.step()
                 self.train_step += 1
                 # nn.utils.clip_grad_norm(model.parameters(), 10.0) #TODO clip?
 

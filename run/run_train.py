@@ -2,9 +2,11 @@ import os
 import time
 
 import torch
+import torch.nn as nn
 import datasets
 from tqdm import tqdm
 from torch.utils.data import DataLoader
+from functools import partial
 
 from load_args import load_args
 from utils.construct_dataset import LMDataset
@@ -92,6 +94,8 @@ model_params = {
     "voc_embd": len(corpus_vocab),
     "n_layer": args.n_layer,
     "device": device,
+    "emb_size": 64,
+    
     }
 model = model(**model_params)
 model.to(device)
@@ -146,7 +150,8 @@ trainer_params = {
 }
 
 model_trainer = ModelTrainer(**trainer_params)
-
+criterion = nn.CrossEntropyLoss(ignore_index=corpus_vocab.pad_index)
+run_process = partial(model_trainer.train_process, model=model, criterion=criterion)
 model_trainer.train(model, args.epochs)
 
 #############################################################################################
