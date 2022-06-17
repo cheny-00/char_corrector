@@ -26,12 +26,24 @@ class RNNLM(nn.Module):
         
         self.drop = nn.Dropout(drop_rate)
         
+        self.tied_weight()
+        
         
     
     def init_hidden(self, n_seq):
         weight = next(self.parameters())
         return weight.new_zeros(self.n_layer, n_seq, self.hid_size)
     
+    def tied_weight(self):
+        self.linear.wegiht = self.embedding_layer.encoder.weight
+  
+    def freeze_emb(self):
+        self.linear.weight.requires_grad = False
+        self.embedding_layer.encoder.weight.requires_grad = False
+    
+    def copy_emb(self):
+        self.linear.weight = self.embedding_layer.encoder.weight.detach().clone()
+        self.embedding_layer.encoder.weight.requires_grad = False
     
     def forward(self, x, h):
         
@@ -42,6 +54,8 @@ class RNNLM(nn.Module):
         
         logit = self.linear(out)
         logit = logit.view(-1, self.voc_size)
+        logit = nn.functional.log_softmax(logit, dim=-1)
         
+        return logit, h 
         
         

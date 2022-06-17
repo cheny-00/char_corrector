@@ -19,12 +19,11 @@ class LMTrainer(BaseTrainer):
             logit, hidden = model(x, hidden)
             loss = criterion(logit, y)
             
-            total_loss += loss.float().item()
-            n_data += 1
-            
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 0.25)
             
+            total_loss += loss.float().item()
+            n_data += 1         
             """
             # SGD
             for p in model.parameters():
@@ -35,16 +34,29 @@ class LMTrainer(BaseTrainer):
         mean_loss = total_loss / n_data
         return mean_loss
     
-    def eval_model(self, model, **kwargs):
+    def eval_model(self, model, eavl_iter=None, **kwargs):
         
         model.eval()
+        criterion = kwargs['criterion']
+        if 'eval_iter' is None:
+            eval_iter = self.dev_data
         
         dev_total_loss = 0
         
         with torch.no_grad():
-            for data in self.dev_data:
-                _, dev_loss = model(data)
-                dev_total_loss += dev_loss
+            for data in eval_iter:
+                hidden = model.init_hidden()
+                
+                n_data = 0
+                batch_loss = 0 
+                for x, y in self.get_batch(data):
+                    logit, hidden = model(x, hidden)
+                    loss = criterion(logit, y)
+                    hidden = repackage_hidden(hidden)
+                    
+                    batch_loss += loss.item()
+                    n_data += 1
+                dev_total_loss += batch_loss / n_data
         return dev_total_loss / len(self.dev_data)
     
     def get_batch(self, data):

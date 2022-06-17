@@ -2,7 +2,7 @@ import datasets
 
 class BaseCollate:
     def __init__(self, corpus) -> None:
-        self.corpus = corpus
+        self.corpus = corpus.data
         
 class TextCollate(BaseCollate):
     def __init__(self, corpus) -> None:
@@ -10,10 +10,10 @@ class TextCollate(BaseCollate):
     def __len__(self):
         return self.corpus.num_rows
     def __getitem__(self, idx):
-        return self.corpus[idx]['text']
+        return self.corpus['text'][idx]
     
-    # def __iter__(self):
-    #     return self.corpus
+    def __iter__(self):
+        return self.corpus
 
 def data_collate(dataset_path, dataset_name):
     collate_table = {

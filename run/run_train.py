@@ -2,6 +2,7 @@ import os
 import time
 
 import torch
+import gensim
 import torch.nn as nn
 import datasets
 from tqdm import tqdm
@@ -9,6 +10,7 @@ from torch.utils.data import DataLoader
 from functools import partial
 
 from load_args import load_args
+from model.char_embedding import CNNCharEmb
 from utils.construct_dataset import LMDataset
 from utils.utils import create_exp_dir, randn_sampler
 from trainer.lm_trainer import LMTrainer
@@ -54,6 +56,7 @@ corpus_dataset = LMDataset(
     vocab=corpus_vocab,
     seq_len=args.seq_len,
     corpus_lines=None,
+    max_len=args.max_len,
     
 )
 
@@ -84,19 +87,33 @@ eval_iter = DataLoader(
     sampler=eval_sampler,
 )
 
+
 model = model_table(args.model_name)
 model_params = { 
     "enc_size": args.enc_size,
     "hid_size": args.hid_size,
     "dec_size": args.dec_size,
-    "voc_size": args.voc_size,
+    "voc_size": len(corpus_vocab),
+    
     "drop_rate": args.dropout,
-    "voc_embd": len(corpus_vocab),
+    "char_kmax": args.char_kmax,
+    "char_kmin": args.char_kmin,
+    
+    "voc_embd": None,
     "n_layer": args.n_layer,
     "device": device,
     "emb_size": 64,
     
     }
+
+char_embd = CNNCharEmb(model_params)
+if os.path.exists(args.load_char_emb_path):
+    char_embd_encoder = gensim.models.KeyedVectors.load_word2vec_format(args.load_char_emb_path)
+    char_embd_encoder_weight = char_embd_encoder.wv
+    char_embd.encoder.weight = char_embd_encoder_weight
+    
+model_params['voc_embd'] = char_embd
+
 model = model(**model_params)
 model.to(device)
 
@@ -159,7 +176,10 @@ model_trainer.train(model, args.epochs)
 #############################################################################################
 
 eval_start_time = time()
-scores = model_trainer.eval_step(model, eval_iter)
+eval_iter = tqdm(eval_iter, desc="evaluate model", total=len(eval_iter))
+eval_loss = model_trainer.eval_step(model, eval_iter)
+eval_log = f"| Final Eval | Loss: {eval_loss:5.2f} | ppl: {torch.exp(eval_loss):8.2f}"
+print(eval_log)
 
 
 #############################################################################################
@@ -172,7 +192,7 @@ if args.qat:
 save_params = {
     "model_state_dict": model.state_dict(),
     "optim_state_dict": optim.state_dict(),
-    "score": final_score
+    "score": eval_loss
 }
 torch.save(save_params,
            os.path.join(save_path, f"{args.proj_name}.pt"))

@@ -8,20 +8,18 @@ def load_args():
     parser.add_argument("--epochs", type=int, default=512, help="number of epochs for training")
     parser.add_argument("--seed", type=int, default=44, help="random seed")
     parser.add_argument("--dropout", type=float, default=0.25, help="setting dropout probability")
+
     parser.add_argument("--debug", action="store_true", help="open debug mode")
     parser.add_argument("--restart", action="store_true", help="restart model")
+    parser.add_argument("--batch_size", type=int, default=512, help="batch size for train")
+    parser.add_argument("--cuda", action="store_false", help="use gpu")
 
     parser.add_argument("--ckpt_path", type=str, default="../checkpoints/", help="path to load checkpoints")
-    parser.add_argument("--cuda", action="store_false", help="use gpu")
-    parser.add_argument("--log_interval", type=int, default=200, help="report interval")
-    parser.add_argument("--eval_interval", type=int, default=8, help="the number of epochs to evaluation interval")
-
-    parser.add_argument("--batch_size", type=int, default=512, help="batch size for train")
     parser.add_argument("--eval_batch_size", type=int, default=1024, help="batch size for evaluation")
     parser.add_argument("--corpus_path", type=str, default="/home/cy/workspace/datasets/new_240hz_data", help="loading corpus path")
     parser.add_argument("--vocab_path", type=str, default="../data/", help="vocab_path")
+    parser.add_argument("--load_char_emb_path", type=str, default="../data/", help="path to load char embedding pre-trained weight")
     
-
     parser.add_argument("--dataset_name", type=str, default="oscar", help="dataset name")
     parser.add_argument("--proj_name", type=str, default="rnnlm", help="project name")
     parser.add_argument("--model_name", type=str, default="rnnlm", help="select model")
@@ -37,7 +35,13 @@ def load_args():
     parser.add_argument("--hid_size", type=int, default=64, help="hidden size")
     parser.add_argument("--voc_size", type=int, default=64, help="hidden size of vocab embedding")
     parser.add_argument("--n_layer", type=int, default=1, help="numbers of unit layers")
+    parser.add_argument("--log_interval", type=int, default=200, help="report interval")
+    parser.add_argument("--eval_interval", type=int, default=8, help="the number of epochs to evaluation interval")
     
+    
+    parser.add_argument("--char_kmin", type=int, default=1, help="Minimum size of the kernel in the character encodernumbers of unit layers")
+    parser.add_argument("--char_kmax", type=int, default=6, help="maximum size of the kernel in the character encoder")
+    parser.add_argument("--max_len", type=int, default=512, help="max sequence length")
     
     args = parser.parse_args()
 

@@ -12,10 +12,10 @@ class CNNCharEmb(nn.Module):
         self.prm = prm
         self.encoder = nn.Embedding(prm["voc_size"], prm["emb_size"])
         self.drop = nn.Dropout(prm["drop_rate"])
-        self.conv_layers = nn.ModuleList([nn.Conv1d(prm["emb_size"], prm["char_hid"], kernel_size=ksz, padding=(prm["char_kmax"]-prm["char_kmin"])) for ksz in range(prm["char_kmin"], prm["char_kmax"]+1)])
-        self.fullcon_layer = nn.Linear(prm["char_hid"]*(prm["char_kmax"] - prm["char_kmin"] + 1), prm["char_hid"])
+        self.conv_layers = nn.ModuleList([nn.Conv1d(prm["emb_size"], prm["hid_size"], kernel_size=ksz, padding=(prm["char_kmax"]-prm["char_kmin"])) for ksz in range(prm["char_kmin"], prm["char_kmax"]+1)])
+        self.fullcon_layer = nn.Linear(prm["hid_size"]*(prm["char_kmax"] - prm["char_kmin"] + 1), prm["hid_size"])
 
-    def forward(self, input):
+    def forward(self, inp_data):
         """
         Calculate embeddings of characters
         
@@ -28,7 +28,7 @@ class CNNCharEmb(nn.Module):
         emb: [seq_len*nbatch, char_hid]
         """
         # char_emb: [seq_len*nbatch, token_len, char_emb]
-        char_emb = self.drop(self.encoder(input))
+        char_emb = self.drop(self.encoder(inp_data))
         list_pooled = []
         """ calculate convoluted hidden states of every kernel """
         for ksz in range(self.prm["char_kmin"], self.prm["char_kmax"]+1):
