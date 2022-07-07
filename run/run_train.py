@@ -8,6 +8,7 @@ import datasets
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from functools import partial
+from torch.utils.tensorboard import SummaryWriter
 
 from load_args import load_args
 from model.char_embedding import CNNCharEmb
@@ -150,7 +151,7 @@ if args.qat:
 ##  train model
 #############################################################################################
 ModelTrainer = LMTrainer
-
+tb_writter = SummaryWriter(log_dir=log_dir)
 trainer_params = {
     "train_data": train_iter,
     "dev_data": dev_iter,
@@ -162,7 +163,7 @@ trainer_params = {
     "ckp_save_path": save_path,
     "scheduler": scheduler,
     "seq_len": args.seq_len,
-    "tb_writter": None,
+    "tb_writter": tb_writter,
     
 }
 

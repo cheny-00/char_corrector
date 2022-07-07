@@ -23,4 +23,6 @@ class Vocab:
         return len(self.itos)
         
         
-        
+if __name__ == '__main__':
+    path = '../data/en_dictionary.txt'
+    vocab = Vocab(path)

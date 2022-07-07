@@ -1,4 +1,5 @@
 import re
+from textwrap import wrap
 import datasets
 import random
 import unicodedata
@@ -7,7 +8,7 @@ from tqdm import tqdm
 
 
 
-def normalize_sents(sents):
+def normalize_sents(sents, wrapper=None):
     
     html_tags = re.compile('<.*?>')
     remove_years = re.compile('\(.*?\d\)')
@@ -33,11 +34,14 @@ def normalize_sents(sents):
         sent = remove_hashtags_and_username.sub("", sent)
         sent = remove_uri.sub("", sent)
         sent = emoji_pattern.sub("", sent)
+        sent = sent.translate(None, "\t\n")
 
         sent = sent.lstrip("1234567890.()-") # remove numbers at begin
 
         sent = sent.replace(" ", "\u2423")
         sent = " ".join(unicodedata.normalize('NFKD', sent))
-        
+        if wrapper is None:
+            sent = wrapper(sent)
         new_sents.append(sent)
+       
     return new_sents
