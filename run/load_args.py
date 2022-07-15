@@ -29,8 +29,8 @@ def load_args():
     parser.add_argument("--fp8", action="store_true", help="float 8bit")
     parser.add_argument("--n_data", type=int, default=-1, help="numbers of using data, -1 for using all data")
     
-    parser.add_argument("--seq_len", type=int, default=64, help="sequence length")
-    parser.add_argument("--enc_size", type=int, default=128, help="hidden size of encoder")
+    parser.add_argument("--seq_len", type=int, default=128, help="sequence length")
+    parser.add_argument("--enc_size", type=int, default=64, help="hidden size of encoder")
     parser.add_argument("--dec_size", type=int, default=64, help="hidden size of decoder")
     parser.add_argument("--hid_size", type=int, default=64, help="hidden size")
     parser.add_argument("--voc_size", type=int, default=64, help="hidden size of vocab embedding")

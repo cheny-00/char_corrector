@@ -1,6 +1,6 @@
 
 def model_table(model_name):
-    from rnnlm import RNNLM
+    from .rnnlm import RNNLM
     
     models = {
         "rnnlm": RNNLM,

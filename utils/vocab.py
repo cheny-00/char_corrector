@@ -15,14 +15,15 @@ class Vocab:
         special_tokens = ['[PAD]', '[MASK]', '[UNK]']
         
         self.itos = list(special_tokens)
-        self.itos.extend([l.rstrip('\t') for l in open(vocab_path, 'r').readlines()])
+        self.itos.extend([l.rstrip(' \t\n') for l in open(vocab_path, 'r').readlines()])
         
         self.stoi = {tok: i for i, tok in enumerate(self.itos)}
 
     def __len__(self):
         return len(self.itos)
         
-        
+
 if __name__ == '__main__':
     path = '../data/en_dictionary.txt'
-    vocab = Vocab(path)
+    vocab = Vocab(path)        
+    

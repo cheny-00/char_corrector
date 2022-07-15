@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 
 import torch
@@ -8,9 +9,12 @@ import datasets
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from functools import partial
+import pyarrow as pa
 from torch.utils.tensorboard import SummaryWriter
 
 from load_args import load_args
+
+sys.path.append("../")
 from model.char_embedding import CNNCharEmb
 from utils.construct_dataset import LMDataset
 from utils.utils import create_exp_dir, randn_sampler
@@ -18,6 +22,8 @@ from trainer.lm_trainer import LMTrainer
 from model import model_table
 from utils import vocab
 from utils import data_collate
+from utils import read_w2v
+
 
 #############################################################################################
 ##  setting
@@ -48,7 +54,9 @@ if not os.path.exists(save_path) and not args.debug:
 #############################################################################################
 val_split = [0.15, 0.1]
 
-corpus_data = data_collate(args.corpus_path, args.dataset_name)
+# corpus_data = data_collate.data_collate(args.corpus_path, args.dataset_name)
+with pa.memory_map(args.corpus_path, 'rb') as source:
+    corpus_data = pa.ipc.open_file(source).read_all()['idx']
 
 corpus_vocab = vocab.Vocab(args.vocab_path)
 
@@ -58,7 +66,7 @@ corpus_dataset = LMDataset(
     seq_len=args.seq_len,
     corpus_lines=None,
     max_len=args.max_len,
-    
+    load_half=True
 )
 
 #if not os.path.exists(args.load_dataset_path):
@@ -74,17 +82,19 @@ dev_sampler, eval_sampler, train_sampler = randn_sampler(
 train_iter = DataLoader(
     corpus_dataset,
     batch_size=args.batch_size,
-    drop_last=False,
+    drop_last=True,
     sampler=train_sampler,
 )
 dev_iter = DataLoader(
     corpus_dataset,
     batch_size=args.eval_batch_size,
+    drop_last=True,
     sampler=dev_sampler,
 )
 eval_iter = DataLoader(
     corpus_dataset,
     batch_size=args.eval_batch_size,
+    drop_last=True,
     sampler=eval_sampler,
 )
 
@@ -104,22 +114,24 @@ model_params = {
     "n_layer": args.n_layer,
     "device": device,
     "emb_size": 64,
+    "tie_weight": False,
     
     }
 
 char_embd = CNNCharEmb(model_params)
 if os.path.exists(args.load_char_emb_path):
     char_embd_encoder = gensim.models.KeyedVectors.load_word2vec_format(args.load_char_emb_path)
-    char_embd_encoder_weight = char_embd_encoder.wv
-    char_embd.encoder.weight = char_embd_encoder_weight
+    wv_np = read_w2v.gensim_w2v_to_pytorch(corpus_vocab, char_embd_encoder)
+    char_embd.encoder.from_pretrained(torch.tensor(wv_np))
     
 model_params['voc_embd'] = char_embd
 
 model = model(**model_params)
+print("==="*10,"device:", device, "==="*10)
 model.to(device)
 
 optim = torch.optim.AdamW(model.parameters(), lr=args.lr)
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim, T_max=60, eta_min= args.lr / 100)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim, T_max=32, eta_min= args.lr / 100)
 
 #############################################################################################
 ##  loading model
@@ -151,7 +163,8 @@ if args.qat:
 ##  train model
 #############################################################################################
 ModelTrainer = LMTrainer
-tb_writter = SummaryWriter(log_dir=log_dir)
+tb_writer = SummaryWriter(log_dir='../tb_logs/')
+
 trainer_params = {
     "train_data": train_iter,
     "dev_data": dev_iter,
@@ -163,22 +176,25 @@ trainer_params = {
     "ckp_save_path": save_path,
     "scheduler": scheduler,
     "seq_len": args.seq_len,
-    "tb_writter": tb_writter,
+    "tb_writer": tb_writer,
+    "emb_dim": 64,
+    "device": device,
     
 }
 
 model_trainer = ModelTrainer(**trainer_params)
 criterion = nn.CrossEntropyLoss(ignore_index=corpus_vocab.pad_index)
 run_process = partial(model_trainer.train_process, model=model, criterion=criterion)
-model_trainer.train(model, args.epochs)
+model_trainer.train(model, args.epochs, run_process=run_process, criterion=criterion)
 
 #############################################################################################
 ##  evaluate model
 #############################################################################################
 
-eval_start_time = time()
+eval_start_time = time.time()
 eval_iter = tqdm(eval_iter, desc="evaluate model", total=len(eval_iter))
-eval_loss = model_trainer.eval_step(model, eval_iter)
+eval_loss = model_trainer.eval_model(model, eval_iter, criterion=criterion)
+eval_loss = eval_loss['valid_score']
 eval_log = f"| Final Eval | Loss: {eval_loss:5.2f} | ppl: {torch.exp(eval_loss):8.2f}"
 print(eval_log)
 

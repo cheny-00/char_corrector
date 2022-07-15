@@ -18,18 +18,21 @@ class BaseTrainer:
                  dev_data,
                  tb_writter,
                  logger,
+                 log_interval,
                  eval_interval,
                  scheduler=None,
                  ckp_save_path=None,
-                 train_step=0):
+                 train_step=0,
+                 device='cpu'):
         
         self.seq_len = seq_len
         self.batch_size = batch_size
         self.emb_dim = emb_dim
+        self.log_interval = log_interval
         self.eval_interval = eval_interval
         
         self.train_data = train_data
-        self.dev_data = tqdm(dev_data, desc='do dev step')
+        self.dev_data = dev_data
         
         self.optim = optim
         self.scheduler = scheduler
@@ -40,28 +43,31 @@ class BaseTrainer:
         
         self.train_step = train_step
         self.hidden = None
+        self.device = device
         
     
     
     def train(self,
               model,
               epochs,
-              run_process):
+              run_process,
+              criterion):
         
 
 
         log_interval, eval_interval = self.log_interval, self.eval_interval
 
-        device = next(model.parameters()).device
+        self.device = next(model.parameters()).device
+        
         model.train()
         best_score = float('inf')
+        train_loss = 0
         for i in range(epochs):
-            tqdm_train_iter = tqdm(self.train_iter)
+            tqdm_train_iter = tqdm(enumerate(self.train_data), desc="train", total=len(self.train_data))
             log_start_time = time()
 
-            for num_batch, data in enumerate(tqdm_train_iter):
-                if hasattr(model, 'init_hidden'):
-                    self.hidden = model.init_hidden()
+            for num_batch, data in tqdm_train_iter:
+                
                 loss = run_process(data=data, )
 
                 train_loss += loss
@@ -85,10 +91,11 @@ class BaseTrainer:
                     tqdm_train_iter.set_description(desc=desc_txt, refresh=True)
                     train_loss = 0
                     log_start_time = time()
+            num_batch=0
             if (i + 1) % eval_interval == 0:
 
                 dev_start_time = time()
-                scores = self.eval_model(model) # TODO should we add early stop?
+                scores = self.eval_model(model, criterion=criterion) # TODO should we add early stop?
                 model.train()
                 dev_elapsed = time() - dev_start_time
                 
@@ -102,8 +109,8 @@ class BaseTrainer:
                     
                     model.cpu()
                     torch.save({"model_state_dict": model.state_dict()},
-                               os.path.join(self.save_path, f"epoch_{(i+1)}_{valid_score:5.3f}.pt"))
-                    model.to(device)
+                               os.path.join(self.ckp_save_path, f"epoch_{(i+1)}_{valid_score:5.3f}.pt"))
+                    model.to(self.device)
                     best_score = valid_score
             self.scheduler.step()
             
